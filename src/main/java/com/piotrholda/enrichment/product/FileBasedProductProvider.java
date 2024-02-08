@@ -1,6 +1,7 @@
 package com.piotrholda.enrichment.product;
 
 import com.piotrholda.enrichment.ProductProvider;
+import com.piotrholda.enrichment.csv.HeaderParser;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Optional;
+
+import static com.piotrholda.enrichment.csv.HeaderParser.getHeaderIndex;
 
 @Service
 @Slf4j
@@ -48,20 +51,9 @@ class FileBasedProductProvider implements ProductProvider {
     public String getProductName(Long key) {
         return getProductNameIfExists(key)
                 .orElseGet(() -> {
-                    log.warn("Missing product name for product_id %d".formatted(key));
+                    log.error("Missing product name for product_id %d".formatted(key));
                     return DEFAULT_PRODUCT_NAME;
                 });
-    }
-
-    private int getHeaderIndex(Map<String, Integer> headerMap, String header) {
-        for (Map.Entry<String, Integer> entry : headerMap.entrySet()) {
-            String name = entry.getKey();
-            int index = entry.getValue();
-            if (name.trim().equals(header)) {
-                return index;
-            }
-        }
-        throw new IllegalArgumentException("Header %s not found in product file".formatted(header));
     }
 
     protected Optional<String> getProductNameIfExists(Long key) {
@@ -69,4 +61,3 @@ class FileBasedProductProvider implements ProductProvider {
                 .map(Product::name);
     }
 }
-
