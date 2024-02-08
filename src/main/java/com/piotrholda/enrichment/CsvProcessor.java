@@ -1,9 +1,8 @@
 package com.piotrholda.enrichment;
 
+import com.piotrholda.enrichment.csv.CsvParser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
@@ -12,9 +11,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Map;
+import java.util.List;
+import java.util.stream.Stream;
 
-import static com.piotrholda.enrichment.csv.HeaderParser.getHeaderIndex;
 
 @Service
 @Slf4j
@@ -22,32 +21,25 @@ import static com.piotrholda.enrichment.csv.HeaderParser.getHeaderIndex;
 class CsvProcessor {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final String DATE = "date";
+    private static final String PRODUCT_ID = "product_id";
+    private static final String CURRENCY = "currency";
+    private static final String PRICE = "price";
+    private static final List<String> HEADER_NAMES = List.of(DATE, PRODUCT_ID, CURRENCY, PRICE);
 
     private final ProductProvider productProvider;
 
     Flux<String> processCsv(Reader reader) {
-        CSVFormat csvFormat = CSVFormat.DEFAULT.builder()
-                .setHeader()
-                .setSkipHeaderRecord(true)
-                .build();
-        try (CSVParser parser = csvFormat.parse(reader)) {
-            Map<String, Integer> headerMap = parser.getHeaderMap();
-            final int dateIndex = getHeaderIndex(headerMap, "date");
-            final int productIdIndex = getHeaderIndex(headerMap, "product_id");
-            final int currencyIndex = getHeaderIndex(headerMap, "currency");
-            final int priceIndex = getHeaderIndex(headerMap, "price");
-            return Flux.concat(
-                    Flux.just("date,product_name,currency,price"),
-                    Flux.fromIterable(parser.getRecords())
-                            .map(csvRecord -> new Trade(csvRecord.get(dateIndex),
-                                    Long.parseLong(csvRecord.get(productIdIndex)),
-                                    csvRecord.get(currencyIndex),
-                                    new BigDecimal(csvRecord.get(priceIndex))))
-                            .filter(this::validateTrade)
-                            .map(this::enrichTrade));
-        } catch (Exception e) {
-            return Flux.error(e);
-        }
+        Stream<Trade> trades = CsvParser.parse(reader, HEADER_NAMES,
+                (csvRecord, headers) -> new Trade(csvRecord.get(headers.get(DATE)),
+                        Long.parseLong(csvRecord.get(headers.get(PRODUCT_ID))),
+                        csvRecord.get(headers.get(CURRENCY)),
+                        new BigDecimal(csvRecord.get(headers.get(PRICE)))));
+        return Flux.concat(
+                Flux.just("date,product_name,currency,price"),
+                Flux.fromStream(trades)
+                        .filter(this::validateTrade)
+                        .map(this::enrichTrade));
     }
 
     private boolean validateTrade(Trade trade) {
