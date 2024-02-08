@@ -2,7 +2,7 @@
 Service enriches trade data with product names from the static data file
 
 ## Requirements
-- Java 21+
+- Java 17+
 - Maven 3.9.5
 
 ## Build and execute instructions
