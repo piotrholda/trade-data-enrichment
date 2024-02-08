@@ -10,11 +10,11 @@
 	</parent>
 	<groupId>com.piotrholda</groupId>
 	<artifactId>trade.data.enrichment</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0</version>
 	<name>trade.data.enrichment</name>
 	<description>Service enriches trade data with product names from the static data file</description>
 	<properties>
-		<java.version>21</java.version>
+		<java.version>17</java.version>
 	</properties>
 	<dependencies>
 		<dependency>

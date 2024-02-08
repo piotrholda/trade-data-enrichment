@@ -1,9 +1,12 @@
 package com.piotrholda.enrichment;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
@@ -17,16 +20,18 @@ import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 
+import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
+@ExtendWith(OutputCaptureExtension.class)
 class EnrichmentControllerTest {
 
     @Autowired
     private WebTestClient webTestClient;
 
     @Test
-    void testCsvUpload() {
+    void shouldCompleteMissingProductName(CapturedOutput output) {
 
         // given
         MultipartBodyBuilder multipartBodyBuilder = loadResourceAsMultipartBodyBuilder("trade.csv");
@@ -39,6 +44,40 @@ class EnrichmentControllerTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class).isEqualTo(expectedResponseBody);
+
+        assertThat(output).contains("Missing product name for product_id 11");
+    }
+
+    @Test
+    void shouldSkipIncorrectDate(CapturedOutput output) {
+
+        // given
+        MultipartBodyBuilder multipartBodyBuilder = loadResourceAsMultipartBodyBuilder("incorrect_date/trade.csv");
+        String expectedResponseBody = loadResourceAsString("incorrect_date/response.csv");
+
+        // when-then
+        webTestClient.post()
+                .uri("/api/v1/enrich")
+                .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo(expectedResponseBody);
+
+        assertThat(output).contains("Incorrect date format: incorrect date");
+    }
+
+    @Test
+    void shouldReturnBadRequestForCorruptedFile() {
+
+        // given
+        MultipartBodyBuilder multipartBodyBuilder = loadResourceAsMultipartBodyBuilder("corrupted_file/trade.csv");
+
+        // when-then
+        webTestClient.post()
+                .uri("/api/v1/enrich")
+                .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
+                .exchange()
+                .expectStatus().isBadRequest();
     }
 
     private static MultipartBodyBuilder loadResourceAsMultipartBodyBuilder(String path) {

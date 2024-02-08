@@ -1,0 +1,4 @@
+date,product_name,currency,price
+20160101,Treasury Bills Domestic,EUR,10
+20160101,REPO Domestic,EUR,30.34
+20160101,Missing Product Name,EUR,35.34
