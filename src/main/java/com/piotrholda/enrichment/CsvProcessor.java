@@ -58,6 +58,6 @@ class CsvProcessor {
                 trade.date() + "," +
                 productName + "," +
                 trade.currency() + "," +
-                trade.price().stripTrailingZeros().toEngineeringString();
+                trade.price().stripTrailingZeros().toPlainString();
     }
 }
